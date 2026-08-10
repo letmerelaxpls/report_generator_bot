@@ -24,7 +24,7 @@ public class ActivityRecord {
     @ManyToOne
     @JoinColumn(name = "category_id")
     private Category category;
-    @Column(nullable = false)
+    @Column(nullable = false, name = "record_date")
     private LocalDate date;
     private Integer count = 0;
 }

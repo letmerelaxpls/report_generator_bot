@@ -1,0 +1,640 @@
+databaseChangeLog:
+  - changeSet:
+      id: 002-insert-categories
+      author: georgii
+      changes:
+        - insert:
+            tableName: categories
+            columns:
+              - column:
+                  name: id
+                  valueNumeric: 1
+              - column:
+                  name: name
+                  value: "Всього за день"
+              - column:
+                  name: column_index
+                  valueNumeric: 1
+
+        - insert:
+            tableName: categories
+            columns:
+              - column:
+                  name: id
+                  valueNumeric: 2
+              - column:
+                  name: name
+                  value: "Проведено медичних оглядів (профогляди)"
+              - column:
+                  name: column_index
+                  valueNumeric: 5
+              - column:
+                  name: aggregate_to_id
+                  valueNumeric: 1
+
+        - insert:
+            tableName: categories
+            columns:
+              - column:
+                  name: id
+                  valueNumeric: 3
+              - column:
+                  name: name
+                  value: "З приводу захворювань"
+              - column:
+                  name: column_index
+                  valueNumeric: 20
+              - column:
+                  name: aggregate_to_id
+                  valueNumeric: 1
+
+        - insert:
+            tableName: categories
+            columns:
+              - column:
+                  name: id
+                  valueNumeric: 4
+              - column:
+                  name: name
+                  value: "ВЛК"
+              - column:
+                  name: column_index
+                  valueNumeric: 19
+              - column:
+                  name: aggregate_to_id
+                  valueNumeric: 1
+
+        - insert:
+            tableName: categories
+            columns:
+              - column:
+                  name: id
+                  valueNumeric: 10
+              - column:
+                  name: name
+                  value: "ат"
+              - column:
+                  name: parent_id
+                  valueNumeric: 2
+
+        - insert:
+            tableName: categories
+            columns:
+              - column:
+                  name: id
+                  valueNumeric: 11
+              - column:
+                  name: name
+                  value: "в/сл"
+              - column:
+                  name: parent_id
+                  valueNumeric: 2
+
+        - insert:
+            tableName: categories
+            columns:
+              - column:
+                  name: id
+                  valueNumeric: 12
+              - column:
+                  name: name
+                  value: "пенс"
+              - column:
+                  name: parent_id
+                  valueNumeric: 2
+
+        - insert:
+            tableName: categories
+            columns:
+              - column:
+                  name: id
+                  valueNumeric: 13
+              - column:
+                  name: name
+                  value: "курсанти"
+              - column:
+                  name: parent_id
+                  valueNumeric: 2
+              - column:
+                  name: column_index
+                  valueNumeric: 15
+              - column:
+                  name: aggregate_to_id
+                  valueNumeric: 2
+
+        - insert:
+            tableName: categories
+            columns:
+              - column:
+                  name: id
+                  valueNumeric: 14
+              - column:
+                  name: name
+                  value: "в/н"
+              - column:
+                  name: parent_id
+                  valueNumeric: 2
+              - column:
+                  name: column_index
+                  valueNumeric: 16
+              - column:
+                  name: aggregate_to_id
+                  valueNumeric: 2
+
+        - insert:
+            tableName: categories
+            columns:
+              - column:
+                  name: id
+                  valueNumeric: 15
+              - column:
+                  name: name
+                  value: "чл. р. / діти"
+              - column:
+                  name: parent_id
+                  valueNumeric: 2
+              - column:
+                  name: column_index
+                  valueNumeric: 17
+              - column:
+                  name: aggregate_to_id
+                  valueNumeric: 2
+
+        - insert:
+            tableName: categories
+            columns:
+              - column:
+                  name: id
+                  valueNumeric: 16
+              - column:
+                  name: name
+                  value: "Оплата"
+              - column:
+                  name: parent_id
+                  valueNumeric: 2
+              - column:
+                  name: column_index
+                  valueNumeric: 18
+              - column:
+                  name: aggregate_to_id
+                  valueNumeric: 2
+
+        - insert:
+            tableName: categories
+            columns:
+              - column:
+                  name: id
+                  valueNumeric: 100
+              - column:
+                  name: name
+                  value: "Всього"
+              - column:
+                  name: parent_id
+                  valueNumeric: 10
+              - column:
+                  name: column_index
+                  valueNumeric: 6
+              - column:
+                  name: aggregate_to_id
+                  valueNumeric: 2
+
+        - insert:
+            tableName: categories
+            columns:
+              - column:
+                  name: id
+                  valueNumeric: 103
+              - column:
+                  name: name
+                  value: "УБД"
+              - column:
+                  name: parent_id
+                  valueNumeric: 10
+              - column:
+                  name: column_index
+                  valueNumeric: 7
+              - column:
+                  name: aggregate_to_id
+                  valueNumeric: 100
+
+        - insert:
+            tableName: categories
+            columns:
+              - column:
+                  name: id
+                  valueNumeric: 104
+              - column:
+                  name: name
+                  value: "ЗАХ"
+              - column:
+                  name: parent_id
+                  valueNumeric: 10
+              - column:
+                  name: column_index
+                  valueNumeric: 8
+              - column:
+                  name: aggregate_to_id
+                  valueNumeric: 100
+
+        - insert:
+            tableName: categories
+            columns:
+              - column:
+                  name: id
+                  valueNumeric: 101
+              - column:
+                  name: name
+                  value: "Всього"
+              - column:
+                  name: parent_id
+                  valueNumeric: 11
+              - column:
+                  name: column_index
+                  valueNumeric: 9
+              - column:
+                  name: aggregate_to_id
+                  valueNumeric: 2
+
+        - insert:
+            tableName: categories
+            columns:
+              - column:
+                  name: id
+                  valueNumeric: 105
+              - column:
+                  name: name
+                  value: "УБД"
+              - column:
+                  name: parent_id
+                  valueNumeric: 11
+              - column:
+                  name: column_index
+                  valueNumeric: 10
+              - column:
+                  name: aggregate_to_id
+                  valueNumeric: 101
+
+        - insert:
+            tableName: categories
+            columns:
+              - column:
+                  name: id
+                  valueNumeric: 106
+              - column:
+                  name: name
+                  value: "ЗАХ"
+              - column:
+                  name: parent_id
+                  valueNumeric: 11
+              - column:
+                  name: column_index
+                  valueNumeric: 11
+              - column:
+                  name: aggregate_to_id
+                  valueNumeric: 101
+
+        - insert:
+            tableName: categories
+            columns:
+              - column:
+                  name: id
+                  valueNumeric: 102
+              - column:
+                  name: name
+                  value: "Всього"
+              - column:
+                  name: parent_id
+                  valueNumeric: 12
+              - column:
+                  name: column_index
+                  valueNumeric: 12
+              - column:
+                  name: aggregate_to_id
+                  valueNumeric: 2
+
+        - insert:
+            tableName: categories
+            columns:
+              - column:
+                  name: id
+                  valueNumeric: 107
+              - column:
+                  name: name
+                  value: "УБД"
+              - column:
+                  name: parent_id
+                  valueNumeric: 12
+              - column:
+                  name: column_index
+                  valueNumeric: 13
+              - column:
+                  name: aggregate_to_id
+                  valueNumeric: 102
+
+        - insert:
+            tableName: categories
+            columns:
+              - column:
+                  name: id
+                  valueNumeric: 108
+              - column:
+                  name: name
+                  value: "ЗАХ"
+              - column:
+                  name: parent_id
+                  valueNumeric: 12
+              - column:
+                  name: column_index
+                  valueNumeric: 14
+              - column:
+                  name: aggregate_to_id
+                  valueNumeric: 102
+
+        - insert:
+            tableName: categories
+            columns:
+              - column:
+                  name: id
+                  valueNumeric: 20
+              - column:
+                  name: name
+                  value: "ат"
+              - column:
+                  name: parent_id
+                  valueNumeric: 3
+
+        - insert:
+            tableName: categories
+            columns:
+              - column:
+                  name: id
+                  valueNumeric: 21
+              - column:
+                  name: name
+                  value: "в/сл"
+              - column:
+                  name: parent_id
+                  valueNumeric: 3
+
+        - insert:
+            tableName: categories
+            columns:
+              - column:
+                  name: id
+                  valueNumeric: 22
+              - column:
+                  name: name
+                  value: "пенс"
+              - column:
+                  name: parent_id
+                  valueNumeric: 3
+
+        - insert:
+            tableName: categories
+            columns:
+              - column:
+                  name: id
+                  valueNumeric: 23
+              - column:
+                  name: name
+                  value: "курсанти"
+              - column:
+                  name: parent_id
+                  valueNumeric: 3
+              - column:
+                  name: column_index
+                  valueNumeric: 30
+              - column:
+                  name: aggregate_to_id
+                  valueNumeric: 3
+
+        - insert:
+            tableName: categories
+            columns:
+              - column:
+                  name: id
+                  valueNumeric: 24
+              - column:
+                  name: name
+                  value: "в/н"
+              - column:
+                  name: parent_id
+                  valueNumeric: 3
+              - column:
+                  name: column_index
+                  valueNumeric: 31
+              - column:
+                  name: aggregate_to_id
+                  valueNumeric: 3
+
+        - insert:
+            tableName: categories
+            columns:
+              - column:
+                  name: id
+                  valueNumeric: 25
+              - column:
+                  name: name
+                  value: "чл. р. / діти"
+              - column:
+                  name: parent_id
+                  valueNumeric: 3
+              - column:
+                  name: column_index
+                  valueNumeric: 32
+              - column:
+                  name: aggregate_to_id
+                  valueNumeric: 3
+
+        - insert:
+            tableName: categories
+            columns:
+              - column:
+                  name: id
+                  valueNumeric: 26
+              - column:
+                  name: name
+                  value: "Оплата"
+              - column:
+                  name: parent_id
+                  valueNumeric: 3
+              - column:
+                  name: column_index
+                  valueNumeric: 33
+              - column:
+                  name: aggregate_to_id
+                  valueNumeric: 3
+
+        - insert:
+            tableName: categories
+            columns:
+              - column:
+                  name: id
+                  valueNumeric: 200
+              - column:
+                  name: name
+                  value: "Всього"
+              - column:
+                  name: parent_id
+                  valueNumeric: 20
+              - column:
+                  name: column_index
+                  valueNumeric: 21
+              - column:
+                  name: aggregate_to_id
+                  valueNumeric: 3
+
+        - insert:
+            tableName: categories
+            columns:
+              - column:
+                  name: id
+                  valueNumeric: 203
+              - column:
+                  name: name
+                  value: "УБД"
+              - column:
+                  name: parent_id
+                  valueNumeric: 20
+              - column:
+                  name: column_index
+                  valueNumeric: 22
+              - column:
+                  name: aggregate_to_id
+                  valueNumeric: 200
+
+        - insert:
+            tableName: categories
+            columns:
+              - column:
+                  name: id
+                  valueNumeric: 204
+              - column:
+                  name: name
+                  value: "ЗАХ"
+              - column:
+                  name: parent_id
+                  valueNumeric: 20
+              - column:
+                  name: column_index
+                  valueNumeric: 23
+              - column:
+                  name: aggregate_to_id
+                  valueNumeric: 200
+
+        - insert:
+            tableName: categories
+            columns:
+              - column:
+                  name: id
+                  valueNumeric: 201
+              - column:
+                  name: name
+                  value: "Всього"
+              - column:
+                  name: parent_id
+                  valueNumeric: 21
+              - column:
+                  name: column_index
+                  valueNumeric: 24
+              - column:
+                  name: aggregate_to_id
+                  valueNumeric: 3
+
+        - insert:
+            tableName: categories
+            columns:
+              - column:
+                  name: id
+                  valueNumeric: 205
+              - column:
+                  name: name
+                  value: "УБД"
+              - column:
+                  name: parent_id
+                  valueNumeric: 21
+              - column:
+                  name: column_index
+                  valueNumeric: 25
+              - column:
+                  name: aggregate_to_id
+                  valueNumeric: 201
+
+        - insert:
+            tableName: categories
+            columns:
+              - column:
+                  name: id
+                  valueNumeric: 206
+              - column:
+                  name: name
+                  value: "ЗАХ"
+              - column:
+                  name: parent_id
+                  valueNumeric: 21
+              - column:
+                  name: column_index
+                  valueNumeric: 26
+              - column:
+                  name: aggregate_to_id
+                  valueNumeric: 201
+
+        - insert:
+            tableName: categories
+            columns:
+              - column:
+                  name: id
+                  valueNumeric: 202
+              - column:
+                  name: name
+                  value: "Всього"
+              - column:
+                  name: parent_id
+                  valueNumeric: 22
+              - column:
+                  name: column_index
+                  valueNumeric: 27
+              - column:
+                  name: aggregate_to_id
+                  valueNumeric: 3
+
+        - insert:
+            tableName: categories
+            columns:
+              - column:
+                  name: id
+                  valueNumeric: 207
+              - column:
+                  name: name
+                  value: "УБД"
+              - column:
+                  name: parent_id
+                  valueNumeric: 22
+              - column:
+                  name: column_index
+                  valueNumeric: 28
+              - column:
+                  name: aggregate_to_id
+                  valueNumeric: 202
+
+        - insert:
+            tableName: categories
+            columns:
+              - column:
+                  name: id
+                  valueNumeric: 208
+              - column:
+                  name: name
+                  value: "ЗАХ"
+              - column:
+                  name: parent_id
+                  valueNumeric: 22
+              - column:
+                  name: column_index
+                  valueNumeric: 29
+              - column:
+                  name: aggregate_to_id
+                  valueNumeric: 202
+
+        - sql:
+            sql: "ALTER TABLE categories ALTER COLUMN id RESTART WITH 1000;"

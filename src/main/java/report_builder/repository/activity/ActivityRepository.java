@@ -1,5 +1,6 @@
 package report_builder.repository.activity;
 
+import org.springframework.data.jpa.repository.EntityGraph;
 import report_builder.model.ActivityRecord;
 import report_builder.model.Category;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -13,6 +14,7 @@ import java.util.Optional;
 public interface ActivityRepository extends JpaRepository<ActivityRecord, Long> {
     Optional<ActivityRecord> findByCategoryAndDate(Category category, LocalDate date);
 
+    @EntityGraph(attributePaths = {"category.parent", "category.aggregateTo"})
     List<ActivityRecord> findAllByDateBetween(LocalDate start, LocalDate end);
 
     void deleteAllByCategory(Category category);

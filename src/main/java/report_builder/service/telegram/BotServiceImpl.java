@@ -1,19 +1,22 @@
 package report_builder.service.telegram;
 
+import java.io.File;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.TextStyle;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
 
 import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.transaction.annotation.Transactional;
+import org.telegram.telegrambots.meta.api.methods.send.SendDocument;
+import org.telegram.telegrambots.meta.api.objects.InputFile;
 import report_builder.model.ActivityRecord;
 import report_builder.model.Category;
 import report_builder.model.enums.CallbackData;
@@ -30,27 +33,39 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKe
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardRow;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.meta.generics.TelegramClient;
+import report_builder.service.file.ReportGeneratorService;
 import report_builder.state.UserState;
 
 @Service
 @RequiredArgsConstructor
 public class BotServiceImpl implements BotService {
-    private static final String DATE_DAY_FORMAT = "dd.MM";
     private static final String DATE_MONTH_FORMAT = "MM.yyyy";
     private static final String DATE_FULL_FORMAT = "dd.MM.yyyy";
     private final Map<Long, UserState> userStates = new ConcurrentHashMap<>();
     private final TelegramClient telegramClient;
     private final CategoryService categoryService;
+    private final ReportGeneratorService reportGeneratorService;
     private final ActivityRepository activityRepository;
 
     @Override
     public void sendMainMenu(Long chatId) {
         SendMessage message = SendMessage.builder()
                 .chatId(chatId.toString())
-                .text("MAIN MENU:")
+                .text("ГОЛОВНЕ МЕНЮ")
                 .replyMarkup(getMainMenuKeyboard())
                 .build();
         execute(message);
+    }
+
+    @Override
+    public void sendMessage(Long chatId, String text) {
+        SendMessage sendMessage = SendMessage.builder()
+                .chatId(chatId)
+                .text(text)
+                .parseMode(ParseMode.HTML)
+                .build();
+
+        execute(sendMessage);
     }
 
     @Override
@@ -58,33 +73,36 @@ public class BotServiceImpl implements BotService {
         EditMessageText edit = EditMessageText.builder()
                 .chatId(chatId.toString())
                 .messageId(messageId)
-                .text("MAIN MENU:")
+                .text("ГОЛОВНЕ МЕНЮ")
                 .replyMarkup(getMainMenuKeyboard())
                 .build();
         execute(edit);
     }
 
     @Override
-    public void editToCategoryMenu(Long chatId, Integer messageId, LocalDate date, Long selectedCatId) {
+    public void editToCategoryMenu(Long chatId, Integer messageId, LocalDate date,
+                                   Long parentId, Long selectedCatId, CallbackData operationType) {
+        List<InlineKeyboardRow> rows = getCategoryButtons(parentId, selectedCatId, date, operationType);
 
-        List<InlineKeyboardRow> categories = getCategoriesButtons(CallbackData.SELECTED_CAT_T0_ADD, selectedCatId, date);
-        List<InlineKeyboardRow> rows = new ArrayList<>(categories);
+        if (selectedCatId != null) {
+            rows.addAll(getDateNavigation(CallbackData.SHIFT_DAY, operationType,
+                    DATE_FULL_FORMAT, selectedCatId, date));
+            rows.add(getSetAmountButton(date, selectedCatId, operationType));
+        }
 
-        rows.addAll(getDateNavigation(CallbackData.SHIFT_DAY, CallbackData.ADD_TO_CATEGORY,
-                DATE_FULL_FORMAT, selectedCatId, date));
+        String text = getParentNames(parentId) + "\n";
+        rows.add(getReturnButton());
 
-        String text = (selectedCatId == null)
-                ? "     Choose a category.     "
-                : "     Press on the date for confirmation"     ;
-
-        EditMessageText edit = EditMessageText.builder()
+        execute(EditMessageText.builder()
                 .chatId(chatId.toString())
                 .messageId(messageId)
-                .text(text)
+                .text(text + "\n" + ((selectedCatId != null)
+                        ? "Підтвердіть, натиснувши на дату \n"
+                        + "або обравши <b>\uD83D\uDD22 Ввести інше число</b>"
+                        : "Оберіть категорію:"))
+                .parseMode(ParseMode.HTML)
                 .replyMarkup(InlineKeyboardMarkup.builder().keyboard(rows).build())
-                .build();
-
-        execute(edit);
+                .build());
     }
 
     @Override
@@ -93,11 +111,9 @@ public class BotServiceImpl implements BotService {
             return;
         }
 
-        Category category = categoryService.getAllCategories().stream()
-                .filter(c -> c.getId().equals(selectedCatId))
-                .findFirst()
-                .orElseThrow(() -> new RuntimeException("Could not find Category with id: "
-                        + selectedCatId));
+        Category category = categoryService.getById(selectedCatId)
+                .orElseThrow(() -> new RuntimeException("Category with id: " + selectedCatId
+                        + " was not found"));
 
         ActivityRecord activityRecord = activityRepository.findByCategoryAndDate(category, selectedDate)
                 .orElseGet(() -> {
@@ -109,36 +125,123 @@ public class BotServiceImpl implements BotService {
 
         activityRecord.setCount(activityRecord.getCount() + 1);
         activityRepository.save(activityRecord);
-
+        String location = getParentNames(selectedCatId);
         String formattedDate = selectedDate.format(DateTimeFormatter.ofPattern(DATE_FULL_FORMAT));
         EditMessageText successMessage = EditMessageText.builder()
                 .chatId(chatId)
                 .messageId(messageId)
-                .text(String.format("✅ <b>%s</b>: %d-th time for %s",
-                        category.getName(), activityRecord.getCount(), formattedDate))
+                .text(String.format("✅ <b>%s</b> за %s. \n Було: %d \n Стало: %s",
+                        location, formattedDate, activityRecord.getCount() - 1, activityRecord.getCount()))
                 .parseMode(ParseMode.HTML)
-                .replyMarkup(getMainMenuKeyboard())
                 .build();
 
         execute(successMessage);
+        sendMainMenu(chatId);
+    }
+
+    @Override
+    public void subtractFromCategory(Long chatId, Integer messageId, LocalDate selectedDate, Long selectedCatId) {
+        if (selectedCatId == null) {
+            return;
+        }
+
+        Category category = categoryService.getById(selectedCatId)
+                .orElseThrow(() -> new RuntimeException("Category with id: " + selectedCatId
+                        + " was not found"));
+
+        ActivityRecord activityRecord = activityRepository.findByCategoryAndDate(category, selectedDate)
+                .orElse(null);
+
+        String formattedDate = selectedDate.format(DateTimeFormatter.ofPattern(DATE_FULL_FORMAT));
+        String text;
+        String location = getParentNames(selectedCatId);
+        if (activityRecord == null || activityRecord.getCount() == 0) {
+            text = String.format("Записів для <b>%s</b> за %s немає",
+                    location, formattedDate);
+        } else {
+            activityRecord.setCount(activityRecord.getCount() - 1);
+            text = String.format("<b>%s</b> за %s. Було: %d. Стало: %d",
+                    location, formattedDate, activityRecord.getCount() + 1, activityRecord.getCount());
+            activityRepository.save(activityRecord);
+        }
+        EditMessageText messageText = EditMessageText.builder()
+                .chatId(chatId)
+                .messageId(messageId)
+                .text(text)
+                .parseMode(ParseMode.HTML)
+                .build();
+
+        execute(messageText);
+        sendMainMenu(chatId);
+    }
+
+    @Override
+    public void prepareCustomQuantityInput(Long chatId, Integer messageId,
+                                           LocalDate date, Long catId, CallbackData operationType) {
+        userStates.put(chatId, new UserState(UserStateType.AWAITING_QUANTITY_INPUT, catId, date, operationType));
+        String location = getParentNames(catId);
+        String operation = operationType.equals(CallbackData.ADD_TO_CATEGORY)
+                ? "<b>додавання</b>"
+                : "<b>віднімання</b>";
+        EditMessageText message = EditMessageText.builder()
+                .chatId(chatId)
+                .messageId(messageId)
+                .text(location + "\n" + "\uD83D\uDD22 Введіть кількість для " + operation)
+                .parseMode(ParseMode.HTML)
+                .replyMarkup(getCancelButton())
+                .build();
+        execute(message);
+    }
+
+    @Override
+    public void saveCustomQuantity(Long chatId, Long catId, LocalDate date, int quantity, CallbackData operationType) {
+        Category category = categoryService.getById(catId).orElseThrow();
+
+        ActivityRecord record = activityRepository.findByCategoryAndDate(category, date)
+                .orElseGet(() -> {
+                    ActivityRecord newRecord = new ActivityRecord();
+                    newRecord.setCategory(category);
+                    newRecord.setDate(date);
+                    return newRecord;
+                });
+        Integer oldCount = record.getCount();
+        int newCount;
+        if (operationType.equals(CallbackData.ADD_TO_CATEGORY)) {
+            newCount = oldCount + quantity;
+        } else {
+            newCount = Math.max(0, oldCount - quantity);
+        }
+        record.setCount(newCount);
+        activityRepository.save(record);
+
+        String location = getParentNames(catId);
+        String formattedDate = date.format(DateTimeFormatter.ofPattern(DATE_FULL_FORMAT));
+        clearUserState();
+
+        sendMessage(chatId, String.format("✅ Збережено для <b>%s</b> за %s \n Було: %s \n Стало: %s",
+                location, formattedDate, oldCount, newCount));
+        sendMainMenu(chatId);
     }
 
     @Override
     public void chooseReportMonth(Long chatId, Integer messageId, LocalDate date) {
+        List<InlineKeyboardRow> keyboard = new ArrayList<>(getDateNavigation(CallbackData.SHIFT_MONTH,
+                CallbackData.SEND_REPORT, DATE_MONTH_FORMAT,
+                null, date));
+        keyboard.add(getReturnButton());
         EditMessageText messageText = EditMessageText.builder()
                 .chatId(chatId)
                 .messageId(messageId)
-                .text("Choose the month of the report.")
+                .text("Оберіть місяц, за який ви хочете отримати звіт.")
                 .replyMarkup(InlineKeyboardMarkup.builder()
-                        .keyboard(getDateNavigation(CallbackData.SHIFT_MONTH,
-                                CallbackData.SEND_REPORT, DATE_MONTH_FORMAT,
-                                null, date))
+                        .keyboard(keyboard)
                         .build())
                 .build();
 
         execute(messageText);
     }
 
+    @Transactional
     @Override
     public void sendReport(Long chatId, Integer messageId, LocalDate selectedMonth) {
         LocalDate startOfMonth = selectedMonth.withDayOfMonth(1);
@@ -153,82 +256,36 @@ public class BotServiceImpl implements BotService {
             EditMessageText message = EditMessageText.builder()
                     .chatId(chatId)
                     .messageId(messageId)
-                    .text("There is no records for " + selectedMonth.format(DateTimeFormatter.ofPattern(DATE_MONTH_FORMAT)))
+                    .text("За " + selectedMonth.format(DateTimeFormatter.ofPattern(DATE_MONTH_FORMAT))
+                    + " немає записів")
                     .replyMarkup(getMainMenuKeyboard())
                     .build();
             execute(message);
             return;
         }
 
-        StringBuilder reportBuilder = new StringBuilder();
-        reportBuilder.append(String.format("\uD83D\uDCCA <b>Detailed report for %s %d</b>\n\n",
-                selectedMonth.getMonth().getDisplayName(TextStyle.FULL, Locale.UK), selectedMonth.getYear()));
+        ClassPathResource templatePath = new ClassPathResource("templates/report_template.docx");
+        String outputPath = new File("reports/Report_" + chatId + "_" + selectedMonth + ".docx")
+                .getAbsolutePath();
 
-        Map<LocalDate, List<ActivityRecord>> groupedByDate = records.stream()
-                .collect(Collectors.groupingBy(ActivityRecord::getDate, TreeMap::new,
-                        Collectors.toList()));
+        reportGeneratorService.fillReport(templatePath, outputPath, records);
+        File file = new File(outputPath);
 
-        groupedByDate.forEach(((date, activityRecords) -> {
-            reportBuilder.append(String.format("\uD83D\uDCC5 <b>%s</b>:\n",
-                    date.format(DateTimeFormatter.ofPattern(DATE_DAY_FORMAT))));
-            for (ActivityRecord r: activityRecords) {
-                reportBuilder.append(String.format("  • %s: %d\n",
-                        r.getCategory().getName(), r.getCount()));
-            }
-            reportBuilder.append("\n");
-        }));
+        DateTimeFormatter monthFormatter = DateTimeFormatter.ofPattern("LLLL",
+                Locale.forLanguageTag("uk-UA"));
+        String monthName = selectedMonth.format(monthFormatter);
 
-        reportBuilder.append("---------------------------\n");
-        reportBuilder.append("<b>Total for month:</b>\n");
-
-        Map<String, Integer> totalStats = records.stream()
-                .collect(Collectors.groupingBy(
-                        r -> r.getCategory().getName(),
-                        Collectors.summingInt(ActivityRecord::getCount)
-                ));
-
-        totalStats.forEach((name, total) -> {
-            reportBuilder.append(String.format("  • %s: <b>%d</b>\n", name, total));
-        });
-
-        EditMessageText reportMsg = EditMessageText.builder()
-                .chatId(chatId)
-                .messageId(messageId)
-                .text(reportBuilder.toString())
+        SendDocument sendDocument = SendDocument.builder()
+                .chatId(chatId.toString())
+                .document(new InputFile(file))
+                .caption("✅ Ваш медичний звіт за <b>" +
+                        monthName.substring(0, 1).toUpperCase() + monthName.substring(1) + "</b>")
                 .parseMode(ParseMode.HTML)
-                .replyMarkup(getMainMenuKeyboard())
                 .build();
 
-        execute(reportMsg);
-    }
+        execute(sendDocument);
 
-    @Override
-    public void prepareAddCategory(Long chatId, Integer messageId) {
-        userStates.put(chatId, new UserState(UserStateType.AWAITING_CATEGORY_NAME, null));
-
-        EditMessageText messageText = EditMessageText.builder()
-                .chatId(chatId)
-                .messageId(messageId)
-                .text("📝 Enter the name for new category:")
-                .replyMarkup(getCancelButton())
-                .build();
-        execute(messageText);
-    }
-
-    @Override
-    public void saveNewCategory(Long chatId, String categoryName) {
-        categoryService.addCategory(categoryName);
-
-        clearUserState();
-
-        SendMessage successMessage = SendMessage
-                .builder()
-                .chatId(chatId)
-                .text("✅ Category<b>" + categoryName + "</b> was added successfully!")
-                .parseMode(ParseMode.HTML)
-                .replyMarkup(getMainMenuKeyboard())
-                .build();
-        execute(successMessage);
+        sendMainMenu(chatId);
     }
 
     @Override
@@ -241,58 +298,19 @@ public class BotServiceImpl implements BotService {
         userStates.clear();
     }
 
-    @Override
-    public void editToChooseSettingMenu(Long chatId, Integer messageId) {
-        List<InlineKeyboardRow> rows = new ArrayList<>();
-        InlineKeyboardRow actions = new InlineKeyboardRow(List.of(
-                createButton("✏\uFE0F Change name \n або \n ❌ Delete",
-                        CallbackData.MANAGE_CATEGORIES.name()),
-                createButton("➕ Add category",
-                        CallbackData.ADD_CATEGORY_START.name())
-        ));
-
-        rows.add(actions);
-        rows.add(getReturnButton());
-
-        EditMessageText messageText = EditMessageText.builder()
-                .chatId(chatId)
-                .messageId(messageId)
-                .text("Choose the setting.")
-                .replyMarkup(InlineKeyboardMarkup.builder().keyboard(rows).build())
-                .build();
-
-        execute(messageText);
-    }
-
-    @Override
-    public void editToManageCategoriesMenu(Long chatId, Integer messageId, Long selectedCatId) {
-
-        List<InlineKeyboardRow> categories = getCategoriesButtons(CallbackData.SELECTED_CAT_TO_MANAGE,
-                selectedCatId, null);
-        List<InlineKeyboardRow> rows = new ArrayList<>(categories);
-
-        InlineKeyboardRow actions = new InlineKeyboardRow(List.of(
-                createButton("✏\uFE0F Change name",
-                        CallbackData.EDIT_CATEGORY.name()
-                                + ":" + " "
-                                + ":" + selectedCatId),
-                createButton("❌ Delete",
-                        CallbackData.DELETE_CATEGORY.name()
-                                + ":" + " "
-                                + ":" + selectedCatId))
-        );
-        rows.add(actions);
-        rows.add(getReturnButton());
-
-        String text = (selectedCatId == null)
-                ? "     Choose category.     "
-                : "     Now choose action.     ";
+    public void showCategoriesToManage(Long chatId, Integer messageId, Long selectedCatId) {
+        List<InlineKeyboardRow> rows = getAllCategoryButtons(selectedCatId);
+        rows.add(getRenameButton(selectedCatId));
+        rows.addAll(getCancelButton().getKeyboard());
+        String text = selectedCatId != null
+                ? "Підтвердіть свій вибір"
+                : "Оберіть категорію для редагування назви";
 
         EditMessageText message = EditMessageText.builder()
-                .chatId(chatId.toString())
+                .chatId(chatId)
                 .messageId(messageId)
                 .text(text)
-                .replyMarkup(InlineKeyboardMarkup.builder().keyboard(rows).build())
+                .replyMarkup(new InlineKeyboardMarkup(rows))
                 .build();
 
         execute(message);
@@ -304,12 +322,12 @@ public class BotServiceImpl implements BotService {
             return;
         }
 
-        userStates.put(chatId, new UserState(UserStateType.EDIT_NAME, catId));
-
+        userStates.put(chatId, new UserState(UserStateType.EDIT_NAME, catId, null, null));
+        String location = getParentNames(catId);
         EditMessageText message = EditMessageText.builder()
                 .chatId(chatId)
                 .messageId(messageId)
-                .text("\uD83D\uDCDD Enter new name for the category:")
+                .text("\uD83D\uDCDD Введіть нове ім'я для " + location)
                 .replyMarkup(getCancelButton())
                 .build();
 
@@ -322,39 +340,68 @@ public class BotServiceImpl implements BotService {
         Category category = categoryService.getById(catId)
                 .orElseThrow(() -> new RuntimeException("Category not found"));
 
-        String oldName = category.getName();
+        String oldName = getParentNames(catId);
         category.setName(newName);
         categoryService.save(category);
 
         userStates.remove(chatId);
-
         execute(SendMessage.builder()
                 .chatId(chatId.toString())
-                .text(String.format("✅ Category <b>%s</b> was renamed to <b>%s</b>", oldName, newName))
+                .text(String.format("✅ Категорію <b>%s</b> було перейменовано <b>%s</b>", oldName, newName))
                 .parseMode(ParseMode.HTML)
                 .replyMarkup(getMainMenuKeyboard())
                 .build());
     }
 
-    @Transactional
-    @Override
-    public void deleteCategory(Long chatId, Integer messageId, Long catId) {
-        Category category = categoryService.getById(catId)
-                .orElseThrow(() -> new RuntimeException("Category not found"));
+    private InlineKeyboardRow getRenameButton(Long selectedCatId) {
+        return new InlineKeyboardRow(List.of(
+                createButton("Редагувати назву", CallbackData.EDIT_CATEGORY.name()
+                + ":" + " "
+                + ":" + selectedCatId)
+        ));
+    }
 
-        activityRepository.deleteAllByCategory(category);
+    private String getParentNames(Long selectedCatId) {
+        if (selectedCatId == null) {
+            return "";
+        }
+        List<String> parentNames = new ArrayList<>();
+        Category current = categoryService.getById(selectedCatId).get();
 
-        String oldName = category.getName();
-        categoryService.delete(category);
+        while (current != null) {
+            parentNames.add(current.getName());
+            Long parentId;
+            if (current.getParent() == null) {
+                current = null;
+            } else {
+                parentId = current.getParent().getId();
+                current = categoryService.getById(parentId).get();
+            }
+        }
+        Collections.reverse(parentNames);
+        if (parentNames.isEmpty()) {
+            return "";
+        }
+        return "📍 " + String.join(" ➔ ", parentNames);
+    }
 
-        EditMessageText message = EditMessageText.builder()
-                .chatId(chatId)
-                .messageId(messageId)
-                .text(String.format("✅ Category with the name <b>%s</b> was deleted!", oldName))
-                .parseMode(ParseMode.HTML)
-                .replyMarkup(getMainMenuKeyboard())
-                .build();
-        execute(message);
+    private List<InlineKeyboardRow> getAllCategoryButtons(Long selectedCatId) {
+        List<InlineKeyboardRow> rows = new ArrayList<>();
+
+        categoryService.getAllCategories().forEach((cat) -> {
+            String text = cat.getName();
+
+            if (cat.getId().equals(selectedCatId)) {
+                text = "✅ " + text;
+            }
+            rows.add(new InlineKeyboardRow(List.of(
+                    createButton(text, CallbackData.MANAGE_CATEGORIES.name()
+                            + ":" + " "
+                            + ":" + cat.getId())
+            )));
+        });
+
+        return rows;
     }
 
     private List<InlineKeyboardRow> getDateNavigation(
@@ -374,37 +421,46 @@ public class BotServiceImpl implements BotService {
 
         InlineKeyboardRow dayNavRow = new InlineKeyboardRow(List.of(
                 createButton("⬅️", shiftType.name()
-                        + ":" + prev + catSuffix),
+                        + ":" + prev + catSuffix + ":" + confirmType.name()),
                 createButton(date.format(DateTimeFormatter.ofPattern(datePattern)),
                         confirmType.name() + ":" + date + catSuffix),
                 createButton("➡️", shiftType.name()
-                        + ":" + next + catSuffix)
+                        + ":" + next + catSuffix + ":" + confirmType.name())
         ));
 
-        InlineKeyboardRow backRow = getReturnButton();
-
-        return List.of(dayNavRow, backRow);
+        return List.of(dayNavRow);
     }
 
-    private List<InlineKeyboardRow> getCategoriesButtons(CallbackData actionType,
-                                                         Long selectedCatId,
-                                                         LocalDate date) {
+    private List<InlineKeyboardRow> getCategoryButtons(Long parentId,
+                                                       Long selectedCatId,
+                                                       LocalDate date,
+                                                       CallbackData operationType) {
 
-        List<InlineKeyboardRow> categories = new ArrayList<>();
+        List<Category> categories = (parentId == null)
+                ? categoryService.getRootCategories()
+                : categoryService.getSubCategories(parentId);
 
-        categoryService.getAllCategories().forEach(cat -> {
-            boolean isSelected = cat.getId().equals(selectedCatId);
-            String buttonText = isSelected ? "✅ " + cat.getName() : cat.getName();
-            String dateText = date != null ? date.toString() : " ";
+        categories = categories.stream()
+                .filter(c -> !c.getId().equals(1L))
+                .toList();
 
-            categories.add(new InlineKeyboardRow(List.of(
-                    createButton(buttonText, actionType.name()
-                            + ":" + dateText
-                            + ":" + cat.getId())
+        List<InlineKeyboardRow> rows = new ArrayList<>();
+
+        categories.forEach((cat) -> {
+            String text = cat.getName();
+
+            if (cat.getId().equals(selectedCatId)) {
+                text = "✅ " + text;
+            }
+
+            rows.add(new InlineKeyboardRow(List.of(
+                    createButton(text, CallbackData.SELECTED_CAT_T0_ADD.name()
+                            + ":" + date
+                            + ":" + cat.getId()
+                            + ":" + operationType.name())
             )));
         });
-
-        return categories;
+        return rows;
     }
 
     private InlineKeyboardButton createButton(String text, String callbackData) {
@@ -417,26 +473,37 @@ public class BotServiceImpl implements BotService {
     private InlineKeyboardMarkup getMainMenuKeyboard() {
         return InlineKeyboardMarkup.builder()
                 .keyboard(List.of(
-                        new InlineKeyboardRow(List.of(createButton("➕ Add to category",
+                        new InlineKeyboardRow(List.of(createButton("➕ Додати до категорії",
                                 CallbackData.ADD_START.name()))),
-                        new InlineKeyboardRow(List.of(createButton("📊 Report",
-                                CallbackData.REPORT_START.name()))),
-                        new InlineKeyboardRow(List.of(createButton("⚙\uFE0F Category settings",
-                                CallbackData.SETTINGS.name())))
+                        new InlineKeyboardRow(List.of(createButton("➖ Відняти від категорії",
+                                CallbackData.SUBTRACT_START.name()))),
+                        new InlineKeyboardRow(List.of(createButton("Змінити назву категорії",
+                                CallbackData.MANAGE_CATEGORIES.name()))),
+                        new InlineKeyboardRow(List.of(createButton("📊 Звіт",
+                                CallbackData.REPORT_START.name())))
+
                 ))
                 .build();
     }
 
     private InlineKeyboardRow getReturnButton() {
         return new InlineKeyboardRow(List.of(
-                createButton("⬅️ To MAIN MENU", CallbackData.BACK_TO_MAIN.name())
+                createButton("⬅️ До головного меню", CallbackData.BACK_TO_MAIN.name())
         ));
+    }
+
+    private InlineKeyboardRow getSetAmountButton(LocalDate date, Long selectedCatId, CallbackData operationType) {
+        return new InlineKeyboardRow(List.of(createButton("\uD83D\uDD22 Ввести інше число",
+                CallbackData.INPUT_CUSTOM_QUANTITY.name()
+                        + ":" + date
+                        + ":" + selectedCatId
+                        + ":" + operationType.name())));
     }
 
     private InlineKeyboardMarkup getCancelButton() {
         return InlineKeyboardMarkup.builder()
                 .keyboardRow(new InlineKeyboardRow(List.of(
-                        createButton("❌ Cancel", CallbackData.CANCEL.name())
+                        createButton("❌ Відмінити", CallbackData.CANCEL.name())
                 )))
                 .build();
     }
@@ -444,7 +511,8 @@ public class BotServiceImpl implements BotService {
     private void execute(Object method) {
         try {
             if (method instanceof SendMessage sm) telegramClient.execute(sm);
-            if (method instanceof EditMessageText emt) telegramClient.execute(emt);
+            else if (method instanceof EditMessageText emt) telegramClient.execute(emt);
+            else if (method instanceof SendDocument sd) telegramClient.execute(sd); // <--- Добавь это!
         } catch (TelegramApiException e) {
             throw new RuntimeException("Could not execute a command", e);
         }

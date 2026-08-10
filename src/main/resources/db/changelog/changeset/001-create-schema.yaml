@@ -1,0 +1,78 @@
+databaseChangeLog:
+  - changeSet:
+      id: 001-create-schema
+      author: georgii
+      changes:
+        - createTable:
+            tableName: categories
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: name
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: parent_id
+                  type: BIGINT
+              - column:
+                  name: column_index
+                  type: INT
+              - column:
+                  name: aggregate_to_id
+                  type: BIGINT
+
+        - createTable:
+            tableName: activity_records
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: category_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: count
+                  type: INT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: record_date
+                  type: DATE
+                  constraints:
+                    nullable: false
+
+  - changeSet:
+      id: 2
+      author: georgii
+      changes:
+        - addForeignKeyConstraint:
+            baseTableName: categories
+            baseColumnNames: parent_id
+            referencedTableName: categories
+            referencedColumnNames: id
+            constraintName: fk_parent
+        - addForeignKeyConstraint:
+            baseTableName: categories
+            baseColumnNames: aggregate_to_id
+            referencedTableName: categories
+            referencedColumnNames: id
+            constraintName: fk_aggregate
+        - addForeignKeyConstraint:
+            baseTableName: activity_records
+            baseColumnNames: category_id
+            referencedTableName: categories
+            referencedColumnNames: id
+            constraintName: fk_category

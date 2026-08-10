@@ -22,8 +22,21 @@ public class CategoryServiceImpl implements CategoryService {
     }
 
     @Override
+    @Cacheable(value = "rootCategories")
+    public List<Category> getRootCategories() {
+        return categoryRepository.findAllByParentIsNull();
+    }
+
+    @Override
+    @Cacheable(value = "subCategories", key = "#a0")
+    public List<Category> getSubCategories(Long parentId) {
+        return categoryRepository.findAllByParentId(parentId);
+    }
+
+    @Override
+    @Cacheable(value = "categories", key = "#a0")
     public Optional<Category> getById(Long catId) {
-        return categoryRepository.findById(catId);
+        return categoryRepository.findByIdWithRelations(catId);
     }
 
     @CacheEvict(value = "categories", allEntries = true)
@@ -31,6 +44,20 @@ public class CategoryServiceImpl implements CategoryService {
         Category category = new Category();
         category.setName(name);
         categoryRepository.save(category);
+    }
+
+    @Override
+    public void warmupCache() {
+        List<Category> categories = getAllCategories();
+
+        List<Category> roots = getRootCategories();
+
+        for (Category cat: categories) {
+            getById(cat.getId());
+
+            getSubCategories(cat.getId());
+        }
+        System.out.println("All categories have been added to cache. Total categories: " + categories.size());
     }
 
     @Override
