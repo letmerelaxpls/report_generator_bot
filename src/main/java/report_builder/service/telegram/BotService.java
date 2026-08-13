@@ -30,10 +30,4 @@ public interface BotService {
     UserState getUserState(Long chatId);
 
     void clearUserState();
-
-    void showCategoriesToManage(Long chatId, Integer messageId, Long selectedCatId);
-
-    void prepareEditCategory(Long chatId, Integer messageId, Long catId);
-
-    void updateCategoryName(Long chatId, Long catId, String newName);
 }

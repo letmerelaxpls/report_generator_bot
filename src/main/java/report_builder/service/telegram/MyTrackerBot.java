@@ -10,9 +10,9 @@ import org.telegram.telegrambots.longpolling.starter.SpringLongPollingBot;
 import org.telegram.telegrambots.longpolling.util.LongPollingSingleThreadUpdateConsumer;
 import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
 import org.telegram.telegrambots.meta.api.objects.Update;
+import report_builder.model.enums.UserStateType;
 import report_builder.service.category.CategoryService;
 import report_builder.state.UserState;
-
 import java.time.LocalDate;
 import java.util.List;
 
@@ -37,8 +37,6 @@ public class MyTrackerBot implements SpringLongPollingBot, LongPollingSingleThre
 
     @Override
     public void consume(Update update) {
-
-
         if (update.hasMessage() && update.getMessage().hasText()) {
             Long chatId = update.getMessage().getChatId();
             if (!checkAccess(chatId)) return;
@@ -64,21 +62,19 @@ public class MyTrackerBot implements SpringLongPollingBot, LongPollingSingleThre
     }
 
     private void handleMessage(Long chatId, String text, UserState state) {
-        switch (state.type()) {
-            case EDIT_NAME -> botService.updateCategoryName(chatId, state.targetId(), text);
-            case AWAITING_QUANTITY_INPUT ->  {
-                try {
-                    int quantity = Integer.parseInt(text);
-                    if (quantity < 0) {
-                        throw new NumberFormatException();
-                    }
-                    botService.saveCustomQuantity(chatId, state.targetId(),
-                            state.date(), quantity, state.operationType());
-                } catch (NumberFormatException e) {
-                    botService.sendMessage(chatId, "⚠\uFE0F Будь ласка, введіть коректне ціле число.");
+        if (state.type() == UserStateType.AWAITING_QUANTITY_INPUT) {
+            try {
+                int quantity = Integer.parseInt(text);
+                if (quantity < 0) {
+                    throw new NumberFormatException();
                 }
+                botService.saveCustomQuantity(chatId, state.targetId(),
+                        state.date(), quantity, state.operationType());
+            } catch (NumberFormatException e) {
+                botService.sendMessage(chatId, "⚠️ Будь ласка, введіть коректне ціле число.");
             }
-            default -> botService.sendMainMenu(chatId);
+        } else {
+            botService.sendMainMenu(chatId);
         }
     }
 
@@ -143,14 +139,6 @@ public class MyTrackerBot implements SpringLongPollingBot, LongPollingSingleThre
             case CANCEL -> {
                 botService.clearUserState();
                 botService.editToMainMenu(chatId, messageId);
-            }
-            case MANAGE_CATEGORIES -> {
-                Long selectedCatId = extractCatId(parts);
-                botService.showCategoriesToManage(chatId, messageId, selectedCatId);
-            }
-            case EDIT_CATEGORY -> {
-                Long catId = extractCatId(parts);
-                botService.prepareEditCategory(chatId, messageId, catId);
             }
         }
     }

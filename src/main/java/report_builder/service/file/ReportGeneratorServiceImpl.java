@@ -39,7 +39,7 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
         try (InputStream is = templatePath.getInputStream();
              XWPFDocument document = new XWPFDocument(is)) {
 
-            XWPFTable table = document.getTables().get(0);
+            XWPFTable table = document.getTables().getFirst();
             int currentRow = START_ROW_INDEX;
             Map<Integer, Integer> grandTotals = new HashMap<>();
 

@@ -33,7 +33,6 @@ public class CacheWarmer {
         }
 
         System.out.println("✅ Category cache is ready!");
-        System.out.println("Мама, привет! :)");
     }
 
     private void warmupRecursive(Category parent) {

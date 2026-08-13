@@ -12,11 +12,6 @@ public enum CallbackData {
     SUBTRACT_FROM_CATEGORY,
     CANCEL,
     SELECTED_CAT_T0_ADD,
-    SELECTED_CAT_TO_MANAGE,
-    MANAGE_CATEGORIES,
-    EDIT_CATEGORY,
-    DELETE_CATEGORY,
-    CONFIRM_DELETE,
     INPUT_CUSTOM_QUANTITY;
 
     public static CallbackData fromString(String data) {

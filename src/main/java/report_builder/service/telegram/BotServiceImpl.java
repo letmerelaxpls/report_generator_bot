@@ -3,7 +3,6 @@ package report_builder.service.telegram;
 import java.io.File;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.time.format.TextStyle;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -11,12 +10,14 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-
-import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.transaction.annotation.Transactional;
+import org.telegram.telegrambots.meta.api.methods.menubutton.SetChatMenuButton;
 import org.telegram.telegrambots.meta.api.methods.send.SendDocument;
 import org.telegram.telegrambots.meta.api.objects.InputFile;
+import org.telegram.telegrambots.meta.api.objects.menubutton.MenuButtonWebApp;
+import org.telegram.telegrambots.meta.api.objects.webapp.WebAppInfo;
 import report_builder.model.ActivityRecord;
 import report_builder.model.Category;
 import report_builder.model.enums.CallbackData;
@@ -46,9 +47,20 @@ public class BotServiceImpl implements BotService {
     private final CategoryService categoryService;
     private final ReportGeneratorService reportGeneratorService;
     private final ActivityRepository activityRepository;
+    @Value("${web.app.url}")
+    private String webAppUrl;
 
     @Override
     public void sendMainMenu(Long chatId) {
+        SetChatMenuButton chatMenuButton = SetChatMenuButton.builder()
+                .chatId(chatId)
+                .menuButton(MenuButtonWebApp.builder()
+                        .text("\uD83D\uDCF1 Web App")
+                        .webAppInfo(new WebAppInfo(webAppUrl))
+                        .build())
+                .build();
+        execute(chatMenuButton);
+
         SendMessage message = SendMessage.builder()
                 .chatId(chatId.toString())
                 .text("ГОЛОВНЕ МЕНЮ")
@@ -253,14 +265,19 @@ public class BotServiceImpl implements BotService {
                 .toList();
 
         if (records.isEmpty()) {
-            EditMessageText message = EditMessageText.builder()
-                    .chatId(chatId)
-                    .messageId(messageId)
-                    .text("За " + selectedMonth.format(DateTimeFormatter.ofPattern(DATE_MONTH_FORMAT))
-                    + " немає записів")
-                    .replyMarkup(getMainMenuKeyboard())
-                    .build();
-            execute(message);
+            if (messageId != null) {
+                EditMessageText message = EditMessageText.builder()
+                        .chatId(chatId)
+                        .messageId(messageId)
+                        .text("За " + selectedMonth.format(DateTimeFormatter.ofPattern(DATE_MONTH_FORMAT))
+                                + " немає записів")
+                        .replyMarkup(getMainMenuKeyboard())
+                        .build();
+                execute(message);
+            } else {
+                sendMessage(chatId, "За " + selectedMonth.format(DateTimeFormatter.ofPattern(DATE_MONTH_FORMAT))
+                        + " немає записів");
+            }
             return;
         }
 
@@ -298,69 +315,6 @@ public class BotServiceImpl implements BotService {
         userStates.clear();
     }
 
-    public void showCategoriesToManage(Long chatId, Integer messageId, Long selectedCatId) {
-        List<InlineKeyboardRow> rows = getAllCategoryButtons(selectedCatId);
-        rows.add(getRenameButton(selectedCatId));
-        rows.addAll(getCancelButton().getKeyboard());
-        String text = selectedCatId != null
-                ? "Підтвердіть свій вибір"
-                : "Оберіть категорію для редагування назви";
-
-        EditMessageText message = EditMessageText.builder()
-                .chatId(chatId)
-                .messageId(messageId)
-                .text(text)
-                .replyMarkup(new InlineKeyboardMarkup(rows))
-                .build();
-
-        execute(message);
-    }
-
-    @Override
-    public void prepareEditCategory(Long chatId, Integer messageId, Long catId) {
-        if (catId == null) {
-            return;
-        }
-
-        userStates.put(chatId, new UserState(UserStateType.EDIT_NAME, catId, null, null));
-        String location = getParentNames(catId);
-        EditMessageText message = EditMessageText.builder()
-                .chatId(chatId)
-                .messageId(messageId)
-                .text("\uD83D\uDCDD Введіть нове ім'я для " + location)
-                .replyMarkup(getCancelButton())
-                .build();
-
-        execute(message);
-    }
-
-    @Transactional
-    @CacheEvict(value = "categories", allEntries = true)
-    public void updateCategoryName(Long chatId, Long catId, String newName) {
-        Category category = categoryService.getById(catId)
-                .orElseThrow(() -> new RuntimeException("Category not found"));
-
-        String oldName = getParentNames(catId);
-        category.setName(newName);
-        categoryService.save(category);
-
-        userStates.remove(chatId);
-        execute(SendMessage.builder()
-                .chatId(chatId.toString())
-                .text(String.format("✅ Категорію <b>%s</b> було перейменовано <b>%s</b>", oldName, newName))
-                .parseMode(ParseMode.HTML)
-                .replyMarkup(getMainMenuKeyboard())
-                .build());
-    }
-
-    private InlineKeyboardRow getRenameButton(Long selectedCatId) {
-        return new InlineKeyboardRow(List.of(
-                createButton("Редагувати назву", CallbackData.EDIT_CATEGORY.name()
-                + ":" + " "
-                + ":" + selectedCatId)
-        ));
-    }
-
     private String getParentNames(Long selectedCatId) {
         if (selectedCatId == null) {
             return "";
@@ -383,25 +337,6 @@ public class BotServiceImpl implements BotService {
             return "";
         }
         return "📍 " + String.join(" ➔ ", parentNames);
-    }
-
-    private List<InlineKeyboardRow> getAllCategoryButtons(Long selectedCatId) {
-        List<InlineKeyboardRow> rows = new ArrayList<>();
-
-        categoryService.getAllCategories().forEach((cat) -> {
-            String text = cat.getName();
-
-            if (cat.getId().equals(selectedCatId)) {
-                text = "✅ " + text;
-            }
-            rows.add(new InlineKeyboardRow(List.of(
-                    createButton(text, CallbackData.MANAGE_CATEGORIES.name()
-                            + ":" + " "
-                            + ":" + cat.getId())
-            )));
-        });
-
-        return rows;
     }
 
     private List<InlineKeyboardRow> getDateNavigation(
@@ -477,11 +412,8 @@ public class BotServiceImpl implements BotService {
                                 CallbackData.ADD_START.name()))),
                         new InlineKeyboardRow(List.of(createButton("➖ Відняти від категорії",
                                 CallbackData.SUBTRACT_START.name()))),
-                        new InlineKeyboardRow(List.of(createButton("Змінити назву категорії",
-                                CallbackData.MANAGE_CATEGORIES.name()))),
                         new InlineKeyboardRow(List.of(createButton("📊 Звіт",
                                 CallbackData.REPORT_START.name())))
-
                 ))
                 .build();
     }
@@ -512,7 +444,8 @@ public class BotServiceImpl implements BotService {
         try {
             if (method instanceof SendMessage sm) telegramClient.execute(sm);
             else if (method instanceof EditMessageText emt) telegramClient.execute(emt);
-            else if (method instanceof SendDocument sd) telegramClient.execute(sd); // <--- Добавь это!
+            else if (method instanceof SendDocument sd) telegramClient.execute(sd);
+            else if (method instanceof SetChatMenuButton scmb) telegramClient.execute(scmb);
         } catch (TelegramApiException e) {
             throw new RuntimeException("Could not execute a command", e);
         }

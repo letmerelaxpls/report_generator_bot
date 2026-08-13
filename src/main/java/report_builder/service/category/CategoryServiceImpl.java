@@ -2,8 +2,8 @@ package report_builder.service.category;
 
 import java.util.List;
 import java.util.Optional;
-
 import report_builder.model.Category;
+import report_builder.repository.activity.ActivityRepository;
 import report_builder.repository.category.CategoryRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
@@ -58,15 +58,5 @@ public class CategoryServiceImpl implements CategoryService {
             getSubCategories(cat.getId());
         }
         System.out.println("All categories have been added to cache. Total categories: " + categories.size());
-    }
-
-    @Override
-    public void save(Category category) {
-        categoryRepository.save(category);
-    }
-
-    @Override
-    public void delete(Category category) {
-        categoryRepository.delete(category);
     }
 }
