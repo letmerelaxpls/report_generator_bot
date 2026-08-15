@@ -1,8 +1,11 @@
 const tg = window.Telegram?.WebApp;
-if (tg) tg.expand();
+if (tg) {
+    tg.expand();
+    tg.ready();
+}
 
 const API_URL = "/api";
-const tgInitData = tg?.initData || "";
+const tgInitData = () => tg?.initData || "";
 
 let selectedCategoryId = null;
 let selectedOperation = "ADD";
@@ -60,7 +63,11 @@ async function loadCategories() {
             headers: { 'X-TG-INIT-DATA': tgInitData }
         });
 
-        if (!response.ok) throw new Error('Помилка завантаження');
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`Server error [${response.status}]:`, errorText);
+            throw new Error(`Помилка завантаження (${response.status})`);
+        }
 
         rawCategoriesCache = await response.json();
         container.innerHTML = '';

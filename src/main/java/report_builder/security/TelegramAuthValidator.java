@@ -57,11 +57,10 @@ public class TelegramAuthValidator {
     public static Long extractUserId(String initData) {
         try {
             Map<String, String> params = parseQueryString(initData);
-            String rawUserJson = params.get("user");
-            if (rawUserJson == null) {
+            String userJsonStr = params.get("user");
+            if (userJsonStr == null) {
                 return null;
             }
-            String userJsonStr = URLDecoder.decode(rawUserJson, StandardCharsets.UTF_8);
             ObjectMapper objectMapper = new ObjectMapper();
             JsonNode node = objectMapper.readTree(userJsonStr);
             return node.get("id").asLong();
@@ -72,11 +71,16 @@ public class TelegramAuthValidator {
 
     private static Map<String, String> parseQueryString(String query) {
         Map<String, String> params = new HashMap<>();
-        for (String param: query.split("&")) {
-            String[] pair = param.split("=", 2);
-            if (pair.length > 1) {
-                params.put(pair[0], pair[1]);
+        try {
+            for (String param: query.split("&")) {
+                String[] pair = param.split("=", 2);
+                if (pair.length > 1) {
+                    params.put(URLDecoder.decode(pair[0], StandardCharsets.UTF_8),
+                            URLDecoder.decode(pair[1], StandardCharsets.UTF_8));
+                }
             }
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to parse initData", e);
         }
         return params;
     }
