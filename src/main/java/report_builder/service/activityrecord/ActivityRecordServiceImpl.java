@@ -33,7 +33,10 @@ public class ActivityRecordServiceImpl implements ActivityRecordService {
             activityRecord.setCount(activityRecord.getCount() + requestDto.count());
         } else if (SUBTRACT_OPERATION.equals(requestDto.operation())) {
             activityRecord.setCount(Math.max(0, activityRecord.getCount() - requestDto.count()));
+        } else {
+            throw new IllegalArgumentException("Unsupported operation: " + requestDto.operation());
         }
+
         activityRepository.save(activityRecord);
     }
 }

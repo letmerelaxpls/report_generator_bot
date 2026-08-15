@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Report Generator</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="toast-container" class="toast-container"></div>
+
+<div class="card">
+  <div class="section-title">📅 Оберіть дату</div>
+  <input type="date" id="record-date">
+</div>
+
+<div class="card">
+  <div class="section-title">📂 Категорії</div>
+  <div id="categories-container">
+    <div class="loader">Завантаження категорій...</div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="section-title">📊 Отримати звіт</div>
+  <input type="month" id="report-month">
+  <button class="btn-primary" onclick="generateReport()">Надіслати звіт у чат</button>
+</div>
+
+<div class="card" id="log-card" style="display: none;">
+  <div class="section-header">
+    <span class="section-title">📋 Лог операцій</span>
+    <button class="btn-clear-logs" onclick="clearLogs()">Очистити</button>
+  </div>
+  <div class="logs-list" id="log-content"></div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>

@@ -19,11 +19,12 @@ import java.util.List;
 @Component
 @RequiredArgsConstructor
 public class MyTrackerBot implements SpringLongPollingBot, LongPollingSingleThreadUpdateConsumer {
-    private final List<Long> WHITELIST_CHAT_IDS = List.of(501873018L, 670376103L);
     private final BotService botService;
     private final CategoryService categoryService;
     @Value("${bot.token}")
     private String botToken;
+    @Value("${telegram.allowed-users}")
+    private List<Long> WHITELIST_CHAT_IDS;
 
     @Override
     public String getBotToken() {

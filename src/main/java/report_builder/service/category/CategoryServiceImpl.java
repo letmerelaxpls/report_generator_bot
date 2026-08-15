@@ -3,10 +3,8 @@ package report_builder.service.category;
 import java.util.List;
 import java.util.Optional;
 import report_builder.model.Category;
-import report_builder.repository.activity.ActivityRepository;
 import report_builder.repository.category.CategoryRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
@@ -37,13 +35,6 @@ public class CategoryServiceImpl implements CategoryService {
     @Cacheable(value = "categories", key = "#a0")
     public Optional<Category> getById(Long catId) {
         return categoryRepository.findByIdWithRelations(catId);
-    }
-
-    @CacheEvict(value = "categories", allEntries = true)
-    public void addCategory(String name) {
-        Category category = new Category();
-        category.setName(name);
-        categoryRepository.save(category);
     }
 
     @Override
