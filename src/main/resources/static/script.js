@@ -60,7 +60,7 @@ async function loadCategories() {
     const container = document.getElementById('categories-container');
     try {
         const response = await fetch(`${API_URL}/categories`, {
-            headers: { 'X-TG-INIT-DATA': tgInitData }
+            headers: { 'X-TG-INIT-DATA': tgInitData() }
         });
 
         if (!response.ok) {
@@ -267,7 +267,7 @@ async function submitRecord(catId) {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-TG-INIT-DATA': tgInitData
+                'X-TG-INIT-DATA': tgInitData()
             },
             body: JSON.stringify({
                 catId: catId,
@@ -360,7 +360,7 @@ async function generateReport() {
     try {
         const response = await fetch(`${API_URL}/reports/generate?chatId=${chatId}&month=${formattedMonth}`, {
             method: 'POST',
-            headers: { 'X-TG-INIT-DATA': tgInitData }
+            headers: { 'X-TG-INIT-DATA': tgInitData() }
         });
 
         if (response.ok) {

@@ -9,60 +9,70 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 public class TelegramAuthValidator {
     public static boolean isInitDataValid(String initData, String botToken) {
         try {
-            Map<String, String> params = parseQueryString(initData);
-            String hash = params.remove("hash");
-            if (hash == null) {
-                return false;
+            Map<String, String> params = new LinkedHashMap<>();
+
+            for (String part : initData.split("&")) {
+                int eq = part.indexOf('=');
+                if (eq <= 0) continue;
+
+                String key = URLDecoder.decode(part.substring(0, eq).replace("+", "%2B"),
+                        StandardCharsets.UTF_8);
+                String value = URLDecoder.decode(part.substring(eq + 1).replace("+", "%2B"),
+                        StandardCharsets.UTF_8);
+                params.put(key, value);
             }
+
+            String hash = params.remove("hash");
+            params.remove("signature");
+
+            if (hash == null) return false;
 
             List<String> keys = new ArrayList<>(params.keySet());
             Collections.sort(keys);
 
-            StringBuilder builder = new StringBuilder();
-            for (String key: keys) {
-                if (!builder.isEmpty()) {
-                    builder.append("\n");
+            StringBuilder dataCheckString = new StringBuilder();
+            for (String key : keys) {
+                if (!dataCheckString.isEmpty()) {
+                    dataCheckString.append('\n');
                 }
-                builder.append(key).append("=").append(params.get(key));
+                dataCheckString.append(key).append('=').append(params.get(key));
             }
 
-            byte[] secretKey = hmacSha256(botToken.trim().getBytes(StandardCharsets.UTF_8),
-                    "WebAppData".getBytes(StandardCharsets.UTF_8));
-            byte[] calculatedHashBytes = hmacSha256(builder.toString().getBytes(StandardCharsets.UTF_8), secretKey);
+            Mac mac = Mac.getInstance("HmacSHA256");
+            mac.init(new SecretKeySpec("WebAppData".getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
+            byte[] secretKey = mac.doFinal(botToken.getBytes(StandardCharsets.UTF_8));
 
-            StringBuilder hexString = new StringBuilder();
-            for (byte b: calculatedHashBytes) {
-                String hex = Integer.toHexString(0xff & b);
-                if (hex.length() == 1) {
-                    hexString.append('0');
-                }
-                hexString.append(hex);
-            }
+            mac = Mac.getInstance("HmacSHA256");
+            mac.init(new SecretKeySpec(secretKey, "HmacSHA256"));
+            byte[] calculated = mac.doFinal(dataCheckString.toString().getBytes(StandardCharsets.UTF_8));
 
-            boolean isValid = hexString.toString().equalsIgnoreCase(hash);
+            String calculatedHex = bytesToHex(calculated);
 
-            if (!isValid) {
-                System.out.println("--- TG AUTH DEBUG ---");
-                System.out.println("Data Check String:\n" + builder);
-                System.out.println("Expected Hash:   " + hash);
-                System.out.println("Calculated Hash: " + hexString);
-                System.out.println("Used Bot Token:  " + (botToken != null ? botToken.substring(0, 5)
-                        + "..." : "NULL"));
-                System.out.println("---------------------");
-            }
-
-            return isValid;
+            return calculatedHex.equalsIgnoreCase(hash);
 
         } catch (Exception e) {
             e.printStackTrace();
             return false;
         }
+    }
+
+    private static String bytesToHex(byte[] bytes) {
+        StringBuilder hexString = new StringBuilder();
+        for (byte b : bytes) {
+            String hex = Integer.toHexString(0xff & b);
+            if (hex.length() == 1) {
+                hexString.append('0');
+            }
+            hexString.append(hex);
+        }
+        return hexString.toString();
     }
 
     public static Long extractUserId(String initData) {
@@ -97,12 +107,5 @@ public class TelegramAuthValidator {
             throw new RuntimeException("Failed to parse initData", e);
         }
         return params;
-    }
-
-    private static byte[] hmacSha256(byte[] data, byte[] key) throws Exception {
-        Mac mac = Mac.getInstance("HmacSHA256");
-        SecretKeySpec secretKeySpec = new SecretKeySpec(key, "HmacSHA256");
-        mac.init(secretKeySpec);
-        return mac.doFinal(data);
     }
 }
