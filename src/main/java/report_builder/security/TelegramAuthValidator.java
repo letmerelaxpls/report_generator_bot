@@ -1,10 +1,7 @@
 package report_builder.security;
 
-
-
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.net.URLDecoder;
@@ -35,7 +32,7 @@ public class TelegramAuthValidator {
                 builder.append(key).append("=").append(params.get(key));
             }
 
-            byte[] secretKey = hmacSha256(botToken.getBytes(StandardCharsets.UTF_8),
+            byte[] secretKey = hmacSha256(botToken.trim().getBytes(StandardCharsets.UTF_8),
                     "WebAppData".getBytes(StandardCharsets.UTF_8));
             byte[] calculatedHashBytes = hmacSha256(builder.toString().getBytes(StandardCharsets.UTF_8), secretKey);
 
@@ -47,9 +44,23 @@ public class TelegramAuthValidator {
                 }
                 hexString.append(hex);
             }
-            return hexString.toString().equalsIgnoreCase(hash);
+
+            boolean isValid = hexString.toString().equalsIgnoreCase(hash);
+
+            if (!isValid) {
+                System.out.println("--- TG AUTH DEBUG ---");
+                System.out.println("Data Check String:\n" + builder);
+                System.out.println("Expected Hash:   " + hash);
+                System.out.println("Calculated Hash: " + hexString);
+                System.out.println("Used Bot Token:  " + (botToken != null ? botToken.substring(0, 5)
+                        + "..." : "NULL"));
+                System.out.println("---------------------");
+            }
+
+            return isValid;
 
         } catch (Exception e) {
+            e.printStackTrace();
             return false;
         }
     }
@@ -75,8 +86,11 @@ public class TelegramAuthValidator {
             for (String param: query.split("&")) {
                 String[] pair = param.split("=", 2);
                 if (pair.length > 1) {
-                    params.put(URLDecoder.decode(pair[0], StandardCharsets.UTF_8),
-                            URLDecoder.decode(pair[1], StandardCharsets.UTF_8));
+                    String key = URLDecoder.decode(pair[0].replace("+", "%2B"),
+                            StandardCharsets.UTF_8);
+                    String value = URLDecoder.decode(pair[1].replace("+", "%2B"),
+                            StandardCharsets.UTF_8);
+                    params.put(key, value);
                 }
             }
         } catch (Exception e) {
