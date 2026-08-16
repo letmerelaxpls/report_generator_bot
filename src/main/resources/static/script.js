@@ -5,7 +5,7 @@ if (tg) {
 }
 
 const API_URL = "/api";
-const tgInitData = () => tg?.initData || "";
+const tgInitData = tg.initData;
 
 let selectedCategoryId = null;
 let selectedOperation = "ADD";
@@ -60,7 +60,7 @@ async function loadCategories() {
     const container = document.getElementById('categories-container');
     try {
         const response = await fetch(`${API_URL}/categories`, {
-            headers: { 'X-TG-INIT-DATA': tgInitData() }
+            headers: { 'X-Telegram-Init-Data': tgInitData }
         });
 
         if (!response.ok) {
@@ -267,7 +267,7 @@ async function submitRecord(catId) {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-TG-INIT-DATA': tgInitData()
+                'X-Telegram-Init-Data': tgInitData
             },
             body: JSON.stringify({
                 catId: catId,
@@ -349,18 +349,14 @@ async function generateReport() {
         return;
     }
 
-    const chatId = tg?.initDataUnsafe?.user?.id;
-    if (!chatId) {
-        showToast('⚠️ Не вдалося визначити ID чату', true);
-        return;
-    }
-
     const formattedMonth = `${monthVal}-01`;
 
     try {
-        const response = await fetch(`${API_URL}/reports/generate?chatId=${chatId}&month=${formattedMonth}`, {
+        const response = await fetch(`${API_URL}/reports/generate?month=${formattedMonth}`, {
             method: 'POST',
-            headers: { 'X-TG-INIT-DATA': tgInitData() }
+            headers: {
+                'X-Telegram-Init-Data': tgInitData
+            }
         });
 
         if (response.ok) {
