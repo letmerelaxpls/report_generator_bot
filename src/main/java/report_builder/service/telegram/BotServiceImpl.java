@@ -271,7 +271,9 @@ public class BotServiceImpl implements BotService {
         }
 
         ClassPathResource templatePath = new ClassPathResource("templates/report_template.docx");
-        String outputPath = new File("reports/Report_" + chatId + "_" + selectedMonth + ".docx")
+        String outputPath = new File("reports/Report_" + chatId + "_"
+                + selectedMonth.format(DateTimeFormatter.ofPattern(DATE_MONTH_FORMAT))
+                + ".docx")
                 .getAbsolutePath();
 
         reportGeneratorService.fillReport(templatePath, outputPath, records);

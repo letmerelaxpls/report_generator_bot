@@ -268,6 +268,12 @@ input[type="number"]:focus {
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
+.btn-primary:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
 .loader {
     text-align: center;
     color: var(--hint-color);

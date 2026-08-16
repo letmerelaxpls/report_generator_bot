@@ -339,12 +339,20 @@ function clearLogs() {
 
 async function generateReport() {
     const monthVal = document.getElementById('report-month').value;
+    const btn = document.getElementById('btn-generate-report');
+
     if (!monthVal) {
         showToast('⚠️ Будь ласка, оберіть місяць', true);
         return;
     }
 
-    const formattedMonth = `${monthVal}-01`;
+    const [year, month] = monthVal.split('-');
+    const formattedMonth = `${month}.${year}`;
+
+    if (btn) {
+        btn.disabled = true;
+        btn.innerText = '⏳ Формирование отчета...';
+    }
 
     try {
         const response = await fetch(`${API_URL}/reports/generate?month=${formattedMonth}`, {
@@ -363,5 +371,10 @@ async function generateReport() {
     } catch (e) {
         console.error(e);
         showToast('❌ Не вдалося згенерувати звіт', true);
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerText = "Надіслати звіт у чат";
+        }
     }
 }

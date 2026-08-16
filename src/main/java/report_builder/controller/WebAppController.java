@@ -1,6 +1,7 @@
 package report_builder.controller;
 
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.List;
 import java.util.Map;
 import io.github.sanvew.tg.init.data.type.User;
@@ -55,10 +56,11 @@ public class WebAppController {
     @PostMapping("/reports/generate")
     public ResponseEntity<Void> generateReport(
             @RequestAttribute(TelegramInitDataFilter.TELEGRAM_USER_ATTR) User user,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate month) {
+            @RequestParam @DateTimeFormat(pattern = "MM.yyyy") YearMonth month) {
 
+        LocalDate reportDate = month.atDay(1);
         Long chatId = user.getId();
-        botService.sendReport(chatId, null, month);
+        botService.sendReport(chatId, null, reportDate);
         return ResponseEntity.ok().build();
     }
 }
