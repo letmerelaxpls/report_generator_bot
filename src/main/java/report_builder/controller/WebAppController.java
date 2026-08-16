@@ -44,8 +44,9 @@ public class WebAppController {
     @PostMapping("/records")
     public ResponseEntity<?> updateRecord(@RequestBody RecordRequestDto requestDto) {
         try {
-            int count = activityRecordService.updateRecord(requestDto);
-            return ResponseEntity.ok(Map.of("count", count));
+            int[] counts = activityRecordService.updateRecord(requestDto);
+            return ResponseEntity.ok(Map.of("count", counts[0],
+                    "oldCount", counts[1]));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }

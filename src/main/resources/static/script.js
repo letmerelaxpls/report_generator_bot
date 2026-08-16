@@ -252,7 +252,6 @@ async function submitRecord(catId) {
     }
 
     const key = `${catId}_${selectedDate}`;
-    const cachedCount = categoryCounts.has(key) ? categoryCounts.get(key) : null;
     const currentOp = selectedOperation;
 
     if (submitBtn) {
@@ -276,14 +275,12 @@ async function submitRecord(catId) {
         });
 
         if (response.ok) {
-            const resData = await response.json().catch(() => null);
-            const newCount = resData && typeof resData.count === 'number'
-                ? resData.count
-                : null;
+            const resData = await response.json();
 
-            if (typeof newCount === 'number') {
-                categoryCounts.set(key, newCount);
-            }
+            const oldCount = resData.oldCount;
+            const newCount = resData.count;
+
+            categoryCounts.set(key, newCount);
 
             const actionText = currentOp === 'SUBTRACT' ? 'Віднято' : 'Додано';
             showToast(`✅ ${actionText} ${quantity}!`);
@@ -293,8 +290,8 @@ async function submitRecord(catId) {
                 catId,
                 selectedDate,
                 currentOp,
-                oldCount: cachedCount ?? '?',
-                newCount: newCount ?? '?'
+                oldCount,
+                newCount
             });
         } else {
             const err = await response.json().catch(() => null);

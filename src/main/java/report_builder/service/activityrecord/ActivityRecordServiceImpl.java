@@ -18,7 +18,7 @@ public class ActivityRecordServiceImpl implements ActivityRecordService {
     private final ActivityRepository activityRepository;
 
     @Override
-    public int updateRecord(RecordRequestDto requestDto) {
+    public int[] updateRecord(RecordRequestDto requestDto) {
         LocalDate date = LocalDate.parse(requestDto.date());
         Category category = categoryRepository.findById(requestDto.catId()).orElseThrow();
         ActivityRecord activityRecord = activityRepository.findByCategoryAndDate(category, date)
@@ -32,17 +32,17 @@ public class ActivityRecordServiceImpl implements ActivityRecordService {
         int current = activityRecord.getCount();
 
         if (ADD_OPERATION.equals(requestDto.operation())) {
-            activityRecord.setCount(activityRecord.getCount() + requestDto.count());
+            activityRecord.setCount(current + requestDto.count());
         } else if (SUBTRACT_OPERATION.equals(requestDto.operation())) {
             if (current <= 0) {
                 throw new IllegalArgumentException("Немає записів за цей день");
             }
-            activityRecord.setCount(Math.max(0, activityRecord.getCount() - requestDto.count()));
+            activityRecord.setCount(Math.max(0, current - requestDto.count()));
         } else {
             throw new IllegalArgumentException("Unsupported operation: " + requestDto.operation());
         }
 
         activityRepository.save(activityRecord);
-        return activityRecord.getCount();
+        return new int[]{activityRecord.getCount(), current};
     }
 }
