@@ -16,6 +16,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.telegram.telegrambots.meta.api.methods.menubutton.SetChatMenuButton;
 import org.telegram.telegrambots.meta.api.methods.send.SendDocument;
 import org.telegram.telegrambots.meta.api.objects.InputFile;
+import org.telegram.telegrambots.meta.api.objects.menubutton.MenuButtonWebApp;
+import org.telegram.telegrambots.meta.api.objects.webapp.WebAppInfo;
 import report_builder.model.ActivityRecord;
 import report_builder.model.Category;
 import report_builder.model.enums.CallbackData;
@@ -50,6 +52,15 @@ public class BotServiceImpl implements BotService {
 
     @Override
     public void sendMainMenu(Long chatId) {
+        SetChatMenuButton chatMenuButton = SetChatMenuButton.builder()
+                .chatId(chatId)
+                .menuButton(MenuButtonWebApp.builder()
+                        .text("Web App")
+                        .webAppInfo(new WebAppInfo(webAppUrl))
+                        .build())
+                .build();
+        execute(chatMenuButton);
+
         SendMessage message = SendMessage.builder()
                 .chatId(chatId.toString())
                 .text("ГОЛОВНЕ МЕНЮ")
