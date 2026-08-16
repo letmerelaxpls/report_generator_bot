@@ -252,13 +252,8 @@ async function submitRecord(catId) {
     }
 
     const key = `${catId}_${selectedDate}`;
-    const oldCount = categoryCounts.get(key) || 0;
+    const cachedCount = categoryCounts.has(key) ? categoryCounts.get(key) : null;
     const currentOp = selectedOperation;
-
-    if (currentOp === 'SUBTRACT' && oldCount === 0) {
-        showToast('⚠️ Записів за цей день немає', true);
-        return;
-    }
 
     if (submitBtn) {
         submitBtn.disabled = true;
@@ -282,28 +277,28 @@ async function submitRecord(catId) {
 
         if (response.ok) {
             const resData = await response.json().catch(() => null);
-
-            let newCount = resData && typeof resData.count === 'number'
+            const newCount = resData && typeof resData.count === 'number'
                 ? resData.count
-                : (currentOp === 'ADD' ? oldCount + quantity : Math.max(0, oldCount - quantity));
+                : null;
 
-            categoryCounts.set(key, newCount);
+            if (typeof newCount === 'number') {
+                categoryCounts.set(key, newCount);
+            }
 
             const actionText = currentOp === 'SUBTRACT' ? 'Віднято' : 'Додано';
             showToast(`✅ ${actionText} ${quantity}!`);
-
             countInput.value = 1;
 
             addLogEntry({
                 catId,
                 selectedDate,
                 currentOp,
-                oldCount,
-                newCount
+                oldCount: cachedCount ?? '?',
+                newCount: newCount ?? '?'
             });
-
         } else {
-            showToast('❌ Помилка при збереженні', true);
+            const err = await response.json().catch(() => null);
+            showToast('❌ ' + (err?.error || 'Помилка при збереженні'), true);
         }
     } catch (e) {
         console.error(e);

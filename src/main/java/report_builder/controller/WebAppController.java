@@ -2,6 +2,7 @@ package report_builder.controller;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import io.github.sanvew.tg.init.data.type.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -41,9 +42,13 @@ public class WebAppController {
     }
 
     @PostMapping("/records")
-    public ResponseEntity<Void> updateRecord(@RequestBody RecordRequestDto requestDto) {
-        activityRecordService.updateRecord(requestDto);
-        return ResponseEntity.ok().build();
+    public ResponseEntity<?> updateRecord(@RequestBody RecordRequestDto requestDto) {
+        try {
+            int count = activityRecordService.updateRecord(requestDto);
+            return ResponseEntity.ok(Map.of("count", count));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
     }
 
     @PostMapping("/reports/generate")
