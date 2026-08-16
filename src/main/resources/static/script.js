@@ -351,7 +351,7 @@ async function generateReport() {
 
     if (btn) {
         btn.disabled = true;
-        btn.innerText = '⏳ Формирование отчета...';
+        btn.innerText = '⏳ Формування звіту...';
     }
 
     try {
