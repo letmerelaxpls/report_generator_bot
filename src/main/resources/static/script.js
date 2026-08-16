@@ -5,7 +5,6 @@ if (tg) {
 }
 
 const API_URL = "/api";
-const tgInitData = tg.initData;
 
 let selectedCategoryId = null;
 let selectedOperation = "ADD";
@@ -22,6 +21,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     loadCategories();
 });
+
+function getInitData() {
+    return window.Telegram?.WebApp?.initData || "";
+}
 
 function showToast(message, isError = false) {
     const container = document.getElementById('toast-container');
@@ -60,7 +63,7 @@ async function loadCategories() {
     const container = document.getElementById('categories-container');
     try {
         const response = await fetch(`${API_URL}/categories`, {
-            headers: { 'X-Telegram-Init-Data': tgInitData }
+            headers: { 'X-Telegram-Init-Data': getInitData() }
         });
 
         if (!response.ok) {
@@ -267,7 +270,7 @@ async function submitRecord(catId) {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-Telegram-Init-Data': tgInitData
+                'X-Telegram-Init-Data': getInitData()
             },
             body: JSON.stringify({
                 catId: catId,
@@ -355,7 +358,7 @@ async function generateReport() {
         const response = await fetch(`${API_URL}/reports/generate?month=${formattedMonth}`, {
             method: 'POST',
             headers: {
-                'X-Telegram-Init-Data': tgInitData
+                'X-Telegram-Init-Data': getInitData()
             }
         });
 

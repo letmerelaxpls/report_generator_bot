@@ -17,12 +17,16 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 @Component
 public class TelegramInitDataFilter extends OncePerRequestFilter {
-
+    @Value("${bot.token}")
+    private String botToken;
     public static final String TELEGRAM_USER_ATTR = "telegramUser";
     public static final String TELEGRAM_INIT_DATA_ATTR = "telegramInitData";
 
-    @Value("${bot.token}")
-    private String botToken;
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        String path = request.getRequestURI();
+        return !path.startsWith("/api/");
+    }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
